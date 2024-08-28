@@ -39,13 +39,20 @@ signature=$(
 # Create JWT
 JWT="${header_payload}"."${signature}"
 
+INSTALLATION_TOKEN=$(curl -X POST -fsSL \
+ -H "Authorization: Bearer $JWT" \
+ -H "Accept: application/vnd.github.v3+json" \
+  https://api.github.com/app/installations/$APPID/access_tokens | jq -r '.token')
+
 
 # Retrieve a short lived runner registration token using the PAT
 REGISTRATION_TOKEN="$(curl -X POST -fsSL \
   -H 'Accept: application/vnd.github.v3+json' \
-  -H "Authorization: Bearer $JWT" \
+  -H "Authorization: Bearer $INSTALLATION_TOKEN" \
   -H 'X-GitHub-Api-Version: 2022-11-28' \
   "$REGISTRATION_TOKEN_API_URL" \
   | jq -r '.token')"
 
 ./config.sh --url $GH_URL --token $REGISTRATION_TOKEN --runnergroup $RUNNER_GROUP --labels $RUNNER_LABELS --unattended --ephemeral && ./run.sh
+
+trap 'echo "Unregistering runner..."; ./config.sh remove --token $REGISTRATION_TOKEN; exit 0' SIGTERM
