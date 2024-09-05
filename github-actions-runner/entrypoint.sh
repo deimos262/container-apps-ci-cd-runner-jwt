@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 
 set -o pipefail
-
-client_id=$CLIENT_ID
-
+set -x
+client_id=$clientID
 pem=$PRIVATE_CERT
 
 now=$(date +%s)
@@ -30,9 +29,9 @@ payload=$( echo -n "${payload_json}" | b64enc )
 # Signature
 header_payload="${header}"."${payload}"
 signature=$(
-    openssl dgst -sha256 -sign <(echo -n "${pem}") \
-    <(echo -n "${header_payload}") | b64enc
+    openssl dgst -sha256 -sign <(echo -n "${pem}") <(echo -n "${header_payload}") | b64enc
 )
+echo "signature: $signature"
 
 # Create JWT
 JWT="${header_payload}"."${signature}"
@@ -40,11 +39,11 @@ JWT="${header_payload}"."${signature}"
 INSTALLATION_TOKEN=$(curl -X POST -fsSL \
  -H "Authorization: Bearer $JWT" \
  -H "Accept: application/vnd.github.v3+json" \
-  https://api.github.com/app/installations/$APPID/access_tokens | jq -r '.token')
+  https://api.github.com/app/installations/$installationID/access_tokens | jq -r '.token')
 
 
 # Retrieve a short lived runner registration token using the PAT
-REGISTRATION_TOKEN="$(curl -X POST -fsSL \
+export REGISTRATION_TOKEN="$(curl -X POST -fsSL \
   -H 'Accept: application/vnd.github.v3+json' \
   -H "Authorization: Bearer $INSTALLATION_TOKEN" \
   -H 'X-GitHub-Api-Version: 2022-11-28' \
@@ -53,4 +52,9 @@ REGISTRATION_TOKEN="$(curl -X POST -fsSL \
 
 ./config.sh --url $GH_URL --token $REGISTRATION_TOKEN --runnergroup $RUNNER_GROUP --labels $RUNNER_LABELS --unattended --ephemeral && ./run.sh
 
-trap 'echo "Unregistering runner..."; ./config.sh remove --token $REGISTRATION_TOKEN; exit 0' SIGTERM
+unregister_runner() {
+    echo "Unregistering runner..."
+    ./config.sh remove --token $REGISTRATION_TOKEN
+}
+
+trap unregister_runner SIGTERM
