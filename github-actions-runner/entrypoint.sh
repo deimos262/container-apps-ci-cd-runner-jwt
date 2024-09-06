@@ -36,7 +36,7 @@ echo "signature: $signature"
 # Create JWT
 JWT="${header_payload}"."${signature}"
 
-INSTALLATION_TOKEN=$(curl -X POST -fsSL \
+export INSTALLATION_TOKEN=$(curl -X POST -fsSL \
  -H "Authorization: Bearer $JWT" \
  -H "Accept: application/vnd.github.v3+json" \
   https://api.github.com/app/installations/$installationID/access_tokens | jq -r '.token')
@@ -53,8 +53,14 @@ export REGISTRATION_TOKEN="$(curl -X POST -fsSL \
 ./config.sh --url $GH_URL --token $REGISTRATION_TOKEN --runnergroup $RUNNER_GROUP --labels $RUNNER_LABELS --unattended --ephemeral && ./run.sh
 
 unregister_runner() {
-    echo "Unregistering runner..."
-    ./config.sh remove --token $REGISTRATION_TOKEN
+   export UNREGISTRATION_TOKEN="$(curl -X POST -fsSL \
+  -H 'Accept: application/vnd.github.v3+json' \
+  -H "Authorization: Bearer $INSTALLATION_TOKEN" \
+  -H 'X-GitHub-Api-Version: 2022-11-28' \
+  "$REGISTRATION_TOKEN_API_URL" \
+  | jq -r '.token')"
+   echo "Unregistering runner..."
+    ./config.sh remove --token $UNREGISTRATION_TOKEN
 }
 
-trap unregister_runner SIGTERM
+trap 'unregister_runner' SIGTERM
