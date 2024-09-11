@@ -61,4 +61,4 @@ echo "UNREGISTRATION_TOKEN: $UNREGISTRATION_TOKEN"
 
 ./config.sh --url $GH_URL --token $REGISTRATION_TOKEN --runnergroup $RUNNER_GROUP --labels $RUNNER_LABELS --unattended --ephemeral && ./run.sh
 
-trap "./config.sh remove --token BHG6LRWP5MZ32Y3GFJLGKA3G3M3JE; exit 0" SIGTERM
+trap 'echo "Unregistering runner..."; ./config.sh remove --token '"$REGISTRATION_TOKEN"'; exit 0' SIGTERM
