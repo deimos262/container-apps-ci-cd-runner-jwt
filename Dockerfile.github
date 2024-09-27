@@ -8,6 +8,10 @@ RUN apt-get update && apt-get install -y curl jq && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
+# import ca certificate
+COPY ./cao2.pem /usr/local/share/ca-certificates/cao2.pem
+RUN update-ca-certificates
+
 COPY github-actions-runner/entrypoint.sh ./entrypoint.sh
 RUN chmod +x ./entrypoint.sh
 
